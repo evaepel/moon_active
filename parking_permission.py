@@ -1,6 +1,7 @@
 import ocrspace
 import time
 import pymongo
+import argparse
 import sys
 
 # Static vars
@@ -45,26 +46,31 @@ class ParkingLogger:
     def __init__(self, db_name: str, collection_name: str):
         self.log = get_collection(db_name, collection_name)
 
-    def info(self, car_plate: str, was_allowed: bool, reason=None):
+    def info(self, car_plate: str, was_allowed: bool, reason=None, verbose=False):
         """
         This function logs a parking entrance event to its database.
 
         :param car_plate: the plate of the vehicle that tried to enter the parking lot.
         :param was_allowed: Boolean value describing if the vehicle was allowed to enter the parking lot.
         :param reason: the reason why the vehicle may not enter the parking lot if access was refused.
+        :param verbose: print verbosity if true
         """
         if was_allowed:
             self.log.insert_one({"plate": car_plate,
                                  "allowed": "Yes",
                                  "time": time.localtime()})
+            if verbose:
+                print("Access granted")
         else:
             assert reason is not None, f"Tried to log an access refusal event and no reason was given"
             self.log.insert_one({"plate": car_plate,
                                  "allowed": "No",
                                  "reason": reason,
                                  "time": time.localtime()})
+            if verbose:
+                print(f"Access denied, {reason}")
 
-    def print(self):
+    def get_log(self):
         for doc in self.log.find():
             print(doc)
 
@@ -132,33 +138,41 @@ def is_operated_by_gas(car_plate: str) -> bool:
     return len(digits) in prohibited_car_plate_lens and sum(digits) % car_plate_digit_sum_prohibited_divisor == 0
 
 
-def is_legal(parking_logger: ParkingLogger, car_plate: str):
+def issue_permission(parking_logger: ParkingLogger, car_plate: str, verbose=False):
     if is_public_transport(car_plate):  # rule a
-        parking_logger.info(car_plate, False, reason="Public transportation vehicle")
+        parking_logger.info(car_plate, False, reason="Public transportation vehicle", verbose=verbose)
         return
 
     if is_military_or_law(car_plate):  # rule b
-        parking_logger.info(car_plate, False, reason="Military and law enforcement vehicle")
+        parking_logger.info(car_plate, False, reason="Military and law enforcement vehicle", verbose=verbose)
         return
 
     if prohibited_last_two_digits(car_plate):  # rule c
-        parking_logger.info(car_plate, False, reason="7 digits number and last two digits are 85/86/87/88/89/00")
+        parking_logger.info(car_plate, False, reason="7 digits number and last two digits are 85/86/87/88/89/00", verbose=verbose)
         return
 
     if is_operated_by_gas(car_plate):  # rule d
-        parking_logger.info(car_plate, False, reason="Operated by gas")
+        parking_logger.info(car_plate, False, reason="Operated by gas", verbose=verbose)
         return
 
     parking_logger.info(car_plate, True)
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Issue parking entrance permission.')
+    parser.add_argument('pictures', metavar='<picture path>', type=str, nargs='+',
+                        help='Picture containing the car plate')
+    parser.add_argument('-v', dest='verbose', action='store_const',
+                        const=True, default=False,
+                        help='add verbosity')
+    args = parser.parse_args()
+
     logger = ParkingLogger(db_name=parking_db, collection_name=parking_log_collection)
     image_to_text_api = ocrspace.API(api_key=personal_user_api_key)
 
-    car_plate = image_to_text_api.ocr_file(sys.argv[1])
-    if car_plate:
-        is_legal(logger, car_plate)
-    else:
-        logger.info(car_plate, False, reason="enable to extract the car plate")
-    logger.print()
+    for pic in args.pictures:
+        car_plate = image_to_text_api.ocr_file(pic)
+        if car_plate:
+            issue_permission(logger, car_plate, verbose=args.verbose)
+        else:
+            logger.info(car_plate, False, reason="unable to extract the car plate", verbose=args.verbose)

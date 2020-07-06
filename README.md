@@ -34,14 +34,19 @@ input: The scripts gets an image of a license plate, decides if the vehicle is a
 Finally it logs the event to the database.
 
 ```bash
-python3 parking_permission.py <path to your image>
+python3 parking_permission.py <path to your image> [-v]
 ```
 
-To print the database you can add to the main a call to ParkingLogger.print():
+For more information run: 
+```bash
+python3 parking_permission.py --help
+```
+
+To print the database you can add to the main() a call to ParkingLogger.get_log():
 ```python
 if __name__ == "__main__":
     logger = ParkingLogger(db_name=parking_db, collection_name=parking_log_collection)
-    logger.print()
+    logger.get_log()
 ```
 
 You can see examples of negative and positive expected results in the examples/negative/ and examples/positive/ respectively.
