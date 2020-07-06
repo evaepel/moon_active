@@ -6,15 +6,14 @@
 
 A Python wrapper for using the ocr.space API.
 
-- Get an OCR API key. Follow the steps at [here](https://ocr.space/ocrapi) to get a new key.
-You should get an email with your new key.
-
-- Copy your key to the 'personal_user_api_key' variable under 'Static vars' at the begining of the parking_permission.py
-
 - Install the ocrspace package to your environement. If you use pip, run the following command:
 ```bash
 pip install ocrspace
 ```
+
+- [OPTIONAL] The default OCR API key in the code is a free key. You can replace it with yours or get a new one [here](https://ocr.space/ocrapi) to get a new key.
+You can then replace your key to the 'personal_user_api_key' variable under 'Static vars' at the begining of the parking_permission.py or leave it as it is.
+
 
 ### MongoDB
 
@@ -34,7 +33,7 @@ input: The scripts gets an image of a license plate, decides if the vehicle is a
 Finally it logs the event to the database.
 
 ```bash
-python3 parking_permission.py <path to your image> [-v]
+python3 parking_permission.py <path to image> [-v]
 ```
 
 For more information run: 
